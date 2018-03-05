@@ -43,6 +43,12 @@ version(linux) {
 			sigemptyset(&mask);
 			sigaddset(&mask, cast(int) __libc_current_sigrtmin());
 			pthread_sigmask(SIG_BLOCK, &mask, null);
+			
+			sigset_t mask1;
+            sigemptyset(&mask1);
+            sigaddset(&mask1, SIGPIPE);
+            sigaddset(&mask1, SIGILL);
+            sigprocmask(SIG_BLOCK, &mask1, null);
 			//}
 		} catch (Throwable) {}
 	}
