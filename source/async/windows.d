@@ -1500,15 +1500,25 @@ package:
 	long recv(in fd_t fd, void[] data)
 	{
 		m_status = StatusInfo.init;
-		long ret = .recv(fd, cast(void*) data.ptr, cast(INT) data.length, 0);
+		retry:
+            	long ret = .recv(fd, cast(void*) data.ptr, cast(INT) data.length, 0);
 
 		//static if (LOG) try log("RECV " ~ ret.to!string ~ "B FD#" ~ fd.to!string); catch (Throwable) {}
 		if (catchSocketError!".recv"(ret)) { // ret == -1
 			if (m_error == error_t.WSAEWOULDBLOCK)
+			{
 				m_status.code = Status.ASYNC;
-			return 0; // TODO: handle some errors more specifically
+				Thread.sleep(1.seconds);
+				goto retry;
+			}
+			else if (m_error == error_t.WSAEINTR)
+			{
+			    goto retry;
+			}
+			return -1; // TODO: handle some errors more specifically
 		}
 
+        m_status.code = Status.OK;
 		return ret;
 	}
 
@@ -1518,13 +1528,25 @@ package:
 		m_status = StatusInfo.init;
 		static if (LOG) try log("SEND " ~ data.length.to!string ~ "B FD#" ~ fd.to!string);
 		catch (Throwable) {}
-		long ret = .send(fd, cast(const(void)*) data.ptr, cast(INT) data.length, 0);
+		
+		retry:
+            	long ret = .send(fd, cast(const(void)*) data.ptr, cast(INT) data.length, 0);
 
 		if (catchSocketError!"send"(ret)) {
 			if (m_error == error_t.WSAEWOULDBLOCK)
+			{
 				m_status.code = Status.ASYNC;
-			return 0; // TODO: handle some errors more specifically
+				Thread.sleep(1.seconds);
+				goto retry;
+			}
+			else if (m_error == error_t.WSAEINTR)
+			{
+			    goto retry;
+			}
+			return -1; // TODO: handle some errors more specifically
 		}
+		
+		m_status.code = Status.OK;
 		return ret;
 	}
 
@@ -1546,7 +1568,9 @@ package:
 
 		addr.family = AF_INET6;
 		socklen_t addrLen = addr.sockAddrLen;
-		long ret = .recvfrom(fd, cast(void*) data.ptr, cast(INT) data.length, 0, addr.sockAddr, &addrLen);
+		
+		retry:
+        		long ret = .recvfrom(fd, cast(void*) data.ptr, cast(INT) data.length, 0, addr.sockAddr, &addrLen);
 
 		if (addrLen < addr.sockAddrLen) {
 			addr.family = AF_INET;
@@ -1555,11 +1579,19 @@ package:
 		static if (LOG) try log("RECVFROM " ~ ret.to!string ~ "B"); catch (Throwable) {}
 		if (catchSocketError!".recvfrom"(ret)) { // ret == -1
 			if (m_error == WSAEWOULDBLOCK)
+			{
 				m_status.code = Status.ASYNC;
-			return 0; // TODO: handle some errors more specifically
+				Thread.sleep(1.seconds);
+				goto retry;
+			}
+			else if (m_error == error_t.WSAEINTR)
+			{
+			    goto retry;
+			}
+			return -1; // TODO: handle some errors more specifically
 		}
+		
 		m_status.code = Status.OK;
-
 		return ret;
 	}
 
@@ -1567,6 +1599,8 @@ package:
 	{
 		m_status = StatusInfo.init;
 		static if (LOG) try log("SENDTO " ~ data.length.to!string ~ "B " ~ addr.toString()); catch (Throwable) {}
+		
+		retry:
 		long ret;
 		if (addr != NetworkAddress.init)
 			ret = .sendto(fd, cast(void*) data.ptr, cast(INT) data.length, 0, addr.sockAddr, addr.sockAddrLen);
@@ -1575,8 +1609,16 @@ package:
 
 		if (catchSocketError!".sendTo"(ret)) { // ret == -1
 			if (m_error == WSAEWOULDBLOCK)
+			{
 				m_status.code = Status.ASYNC;
-			return 0; // TODO: handle some errors more specifically
+				Thread.sleep(1.seconds);
+				goto retry;
+			}
+			else if (m_error == error_t.WSAEINTR)
+			{
+			    goto retry;
+			}
+			return -1; // TODO: handle some errors more specifically
 		}
 
 		m_status.code = Status.OK;

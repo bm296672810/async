@@ -1,5 +1,7 @@
 module async.posix;
 
+import core.thread;
+
 version (Posix):
 
 import async.types;
@@ -898,6 +900,8 @@ package:
 		if (catchError!".recv"(ret)) {
 			if (m_error == EPosix.EWOULDBLOCK || m_error == EPosix.EAGAIN) {
 				m_status.code = Status.ASYNC;
+				Thread.sleep(1.seconds);
+				goto retry;
 			} else switch (m_error) with (EPosix) {
 				case EINTR:
 					goto retry;
@@ -909,7 +913,7 @@ package:
 					break;
 			}
 
-			return 0;
+			return -1;
 		}
 
 		m_status.code = Status.OK;
@@ -929,6 +933,8 @@ package:
 		if (catchError!".send"(ret)) {
 			if (m_error == EPosix.EWOULDBLOCK || m_error == EPosix.EAGAIN) {
 				m_status.code = Status.ASYNC;
+				Thread.sleep(1.seconds);
+				goto retry;
 			} else switch (m_error) with (EPosix) {
 				case EINTR:
 					goto retry;
@@ -940,7 +946,7 @@ package:
 					break;
 			}
 
-			return 0;
+			return -1;
 		}
 
 		m_status.code = Status.OK;
@@ -965,17 +971,18 @@ package:
 				} else if (m_error == EPosix.EWOULDBLOCK || m_error == EPosix.EAGAIN) {
 					.tracef("recvmsg system call on FD %d would have blocked", fd);
 					m_status.code = Status.ASYNC;
-					return 0;
+					Thread.sleep(1.seconds);
+					continue;
 				} else if (m_error == EBADF ||
 				           m_error == EFAULT ||
 				           m_error == EINVAL ||
 				           m_error == ENOTCONN ||
 				           m_error == ENOTSOCK) {
 					.errorf("recvmsg system call on FD %d encountered fatal socket error: %s", fd, this.error);
-					assert(false);
+					return -1; //assert(false);
 				} else if (catchError!"Receive message"(err)) {
 					.errorf("recvmsg system call on FD %d encountered socket error: %s", fd, this.error);
-					return 0;
+					return -1;
 				}
 			} else {
 				.tracef("Received %d bytes on FD %d", err, fd);
@@ -1004,7 +1011,8 @@ package:
 				} else if (m_error == EPosix.EWOULDBLOCK || m_error == EPosix.EAGAIN) {
 					.tracef("sendmsg system call on FD %d would have blocked", fd);
 					m_status.code = Status.ASYNC;
-					return 0;
+					Thread.sleep(1.seconds);
+					continue;//return 0;
 				} else if (m_error == ECONNRESET ||
 				           m_error == EPIPE) {
 					return 0;
@@ -1016,7 +1024,7 @@ package:
 				           m_error == ENOTSOCK ||
 				           m_error == EOPNOTSUPP) {
 					.errorf("sendmsg system call on FD %d encountered fatal socket error: %s", fd, this.error);
-					assert(false);
+					return -1;//assert(false);
 				// ENOTCONN, EMSGSIZE
 				} else if (catchError!"Send message"(err)) {
 					.errorf("sendmsg system call on FD %d encountered socket error: %s", fd, this.error);
@@ -1044,6 +1052,9 @@ package:
 		if (catchError!".recvFrom"(ret)) {
 			if (m_error == EPosix.EWOULDBLOCK || m_error == EPosix.EAGAIN) {
 				m_status.code = Status.ASYNC;
+
+				Thread.sleep(1.seconds);
+				goto retry;
 			} else switch (m_error) with (EPosix) {
 				case EINTR:
 					goto retry;
@@ -1055,7 +1066,7 @@ package:
 					break;
 			}
 
-			return 0;
+			return -1;
 		}
 
 		m_status.code = Status.OK;
@@ -1076,6 +1087,8 @@ package:
 		if (catchError!".sendTo"(ret)) {
 			if (m_error == EPosix.EWOULDBLOCK || m_error == EPosix.EAGAIN) {
 				m_status.code = Status.ASYNC;
+				Thread.sleep(1.seconds);
+				goto retry;
 			} else switch (m_error) with (EPosix) {
 				case EINTR:
 					goto retry;
@@ -1087,7 +1100,7 @@ package:
 					break;
 			}
 
-			return 0;
+			return -1;
 		}
 
 		m_status.code = Status.OK;

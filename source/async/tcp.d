@@ -163,6 +163,17 @@ public:
 		return m_socket;
 	}
 
+    // [shove]
+	@property StatusInfo status() const
+	{
+		return m_evLoop.status;
+	}
+
+	@property string error() const
+	{
+		return m_evLoop.error;
+	}
+	
 package:
 	mixin COSocketMixins;
 
